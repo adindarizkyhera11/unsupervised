@@ -1,0 +1,435 @@
+---
+title: "Unsupervised Learning: Association Rules"
+author: "Adinda Herawati - 425148 and Zimin Luo - 417124 "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,         
+                      warning = FALSE,      
+                      results = 'asis',     
+                      error = FALSE,         
+                      message = FALSE,      
+                      fig.align = 'center', 
+                      eval = TRUE)
+
+options(knitr.table.format = "html")
+```
+
+
+```{r libraries, include = FALSE}
+# library loads
+library(arules)
+library(arulesViz)
+```
+
+```{r, echo = TRUE, results='asis'}
+data <- read.csv2("~/Documents/Fall_Semester_2019_2020/5. Unsupervised Learning/Final Project [3rd Block]/processed1.csv", sep=",")
+dim(data)
+View(data)
+head(data)
+```
+
+
+```{r, echo = FALSE, results='asis' }
+trans<- data.frame(data$genre1,data$genre2,data$genre3,data$genre4,data$genre5,data$genre6,data$genre7,data$genre8)
+
+View(trans)
+
+
+trans2<-write.csv(trans,"~/Documents/Fall_Semester_2019_2020/5. Unsupervised Learning/Final Project [3rd Block]/genre.csv", row.names = FALSE)
+```
+
+
+### Interpretation ###
+
+This will be market basket analysis based on which genres people usually watched.
+
+```{r, echo = FALSE, results='asis' }
+trans2 <- read.transactions("~/Documents/Fall_Semester_2019_2020/5. Unsupervised Learning/Final Project [3rd Block]/genre.csv", format="basket", sep=",", skip=1)
+```
+
+```{r, echo = FALSE, results='asis' }
+itemFrequencyPlot(trans2, topN=23, type="absolute", main="Number of Genres Movie")
+itemFrequency(trans2, type="absolute")
+```
+###interpretation###
+based on the graph and the information from item frequency, Drama is the most popular genre, there are about 1893 movies which has Drama Genre, following that there will be other Genres such as Comedy (1461), Thriller (1117), Action (959), Romance (859), Adventure (781), Crime (709), Fantasy (507), Sci-Fi (496), Family (442) and the less popular genres is Film-Noir (1). 
+
+```{r, echo = FALSE, results='asis' }
+inspect(trans2)
+size(trans2)
+LIST(head(trans2))
+```
+### Interpretation ###
+There are 3765 combinations of Genres in this data. In one movie, there will be maximum 8 genres.
+
+```{r, echo = FALSE, results='asis' }
+ctab<-crossTable(trans2, measure="count", sort=TRUE)
+ctab
+```
+
+### Interpretation ###
+Based on count tab above, it shows that on our data the number of combination genres on Drama and Comedy are 499 movies. The number of combination genres on Comedy and Thriller are 106 and etc
+
+```{r, echo = FALSE, results='asis' }
+ptab<-crossTable(trans2, measure="probability", sort=TRUE)
+ptab
+```
+
+### Interpretation ###
+Based on probability tab above, it shows that on our data that the probability movie which had combination genres on Drama and Comedy are 0.1328541001. Combination genres on Comedy and Thriller are 0.0282215122 and etc
+
+```{r, echo = FALSE, results='asis' }
+ltab<-crossTable(trans2, measure="lift", sort=TRUE)
+ltab
+```
+
+### Interpretation ###
+Based on lift tab above, it shows that on our data that the probability of people choose movie which had combination genres on Drama and Comedy are 0.6776810 . Combination genres on Comedy and Thriller are 0.24396530 and etc
+
+```{r, echo = FALSE, results='asis' }
+rules.trans2<- apriori(trans2,parameter=list(supp=0.05, conf=0.8))
+rules.by.conf<-sort(rules.trans2, by="confidence", decreasing=FALSE) 
+
+inspect(head(rules.by.conf))
+
+```
+### Interpretation ###
+Based on table above, there are two movies who have the same rule. People Who choose movies in genres Documentary and War will be choose Drama for their next movies. However, the probability to that rule is about 0.0005324814 or 0.05% with the level of confidence about 0.5. 
+
+
+```{r, echo = FALSE, results='asis' }
+rules.by.conf2<-sort(rules.trans2, by="confidence", decreasing=TRUE) 
+inspect(head(rules.by.conf2))
+```
+
+### Interpretation ###
+Based on table above, it shows that the probability people who choose Film-Noir then choose Mystery about 0.0002662407 or 0.02% with the level of confidence about 1. Also, that rule has lift 9.78 ~ 10, then it means that people who choose Genre : Film-Noir then they will choose Mystery are 10 times higher more likely to watch those genres.
+
+
+```{r, echo = FALSE, results='asis' }
+freq.items <- eclat(trans2, parameter=list(supp=0.05, maxlen=15))
+freq.items
+inspect(freq.items[1:10])
+```
+
+### Interpretation ###
+Table above shows there are 43 combination of genres who have minimum support number around 0.05
+
+```{r, echo = FALSE, results='asis' }
+rules.drama <- apriori(data=trans2, parameter=list(supp=0.0005,conf = 0.8), appearance=list(default="lhs", rhs="Drama"), control=list(verbose=F)) 
+
+rules.drama.bysup<-sort(rules.drama, by="support", decreasing=TRUE)
+inspect(head(rules.drama.bysup))
+
+size(rules.drama.bysup)
+```
+
+### Interpretation ###
+- Table above shows the rule for Drama Movies with minimum support 0.0005 or 0.05%, There are 91 movies which had genres of Drama.
+- The probability people who choose biography movie will definitely choose Drama about 0.06070288 or 6%
+
+```{r, echo = FALSE, results='asis' }
+inspect(rules.drama[is.maximal(rules.drama)==TRUE])
+```
+
+### Interpretation ###
+Table above shows the list of genres when people 100% will choose Drama after they watched movie from left-hand-side genres
+
+
+```{r, echo = FALSE, results='asis' }
+freq.closed<-eclat(trans2, parameter=list(supp=0.005, maxlen=15))
+inspect(freq.closed)
+```
+### Interpretation ###
+-the number of genre movies with combination of Drama and Western Genre about 37 with the minimum and people who choose those genre about 0.9%
+
+```{r, echo = FALSE, results='asis' }
+plot(rules.trans2, measure=c("support","lift"), shading="confidence")
+```
+
+### Interpretation ###
+Graphs above show the scatterplot between lift and support, the genre movie who had the highest confidence and the highest lift at the 80. Eventhought mostly our data are near 0 - 0.1 support and the lift around 0-40.
+
+
+```{r, echo = FALSE, results='asis' }
+supportingTransactions(rules.drama, trans2) 
+inspect(supportingTransactions(rules.drama, trans2))
+size(supportingTransactions(rules.drama, trans2))
+
+```
+### Interpretation ###
+Based on rules_drama, we can say that people who choose movies which have combination of Biography-Drama and choose Drama for next their next movie about 228 people. However, we can recommend to platform Movie to suggest more about Drama Movies, because of people more interesting to watch that.
+
+```{r, echo = FALSE, results='asis' }
+plot(rules.trans2, method="graph") 
+```
+
+### Interpretation ###
+Plot above shows 100 rules in this data with the criteria size support around 0.013-0.504 and the lift around 1-12.371. However, Drama has the biggest circle because Drama is the most popular genre.
+
+
+```{r, echo = FALSE, results='asis' }
+plot(rules.trans2, method="grouped") 
+```
+
+#############################################################################################################################################
+In this part, we would like to make recommendation movie system based on movie data which has been cleaned before
+
+```{r, echo = FALSE, results='asis' }
+getwd()
+setwd("~/Documents/Fall_Semester_2019_2020/5. Unsupervised Learning/Final Project [3rd Block]/")
+
+library(psych)
+library(dplyr)
+library(tidytext)
+library(arules)
+library(arulesViz)
+library(arulesCBA)
+library(arulesSequences)
+```
+
+
+```{r, echo = FALSE, results='asis' }
+dt <- read.transactions("processed.csv", format="basket", sep=",", rm.duplicates = TRUE, skip=1)
+inspect(head(dt))
+```
+
+```{r, echo = FALSE, results='asis' }
+head(itemFrequency(dt, type="absolute"))
+size(dt) 
+```
+
+### Interpretation ###
+item frequency shows the frequency of every detail information in movie database such as the number of movies which have different duration. There are 1392 movies which have duration <100 min, There are 1447 movies which have duration <120min, and there are 904 movies which have duration >120min.
+
+
+```{r, echo = FALSE, results='asis' }
+itemFrequencyPlot(dt, topN = 20)
+```
+
+### Interpretation ###
+Based on the item frequency above, it shows that the most influenced factors which make people watch movies is Color. Following that, the language is english and mostly movies are come from USA. However, the duration of movies usually less than 120 minutes. The favourite genre for movies are Drama, Comedy, Thriller, Romance, Adventure and Crime.
+
+```{r, echo = FALSE, results='asis' }
+freq.items<-eclat(dt, parameter=list(supp=0.05, maxlen=15)) # basic eclat
+inspect(freq.items)
+```
+
+### Interpretation ###
+The number of movies which have criterias (balance, color, english and fantasy) are 190 movies and their probability is 5% from the databases. However, the number of movies which have criterias (Biography, Drama and English) are 195 movies. etc
+
+```{r, echo = FALSE, results='asis' }
+LIST(head(dt))
+```
+
+### Interpretation ###
+it shows the unique observations inside the movie database
+
+
+### Good ###
+Below we would like to know which movies have good criteria in rating
+```{r, echo = FALSE, results='asis' }
+rules.good<-apriori(data=dt, parameter=list(supp=0.1,conf = 0.1), 
+                        appearance=list(default="lhs", rhs=c("Good")), control=list(verbose=F)) 
+
+rules.good.bylift<-sort(rules.good, by="lift", decreasing=TRUE)
+rules.good <- rules.good[is.redundant(rules.good)==FALSE]
+
+inspect(rules.good.bylift)
+
+is.redundant(rules.good)
+```
+
+### Interpretation ###
+- There are 44 rules when movies are defined as good movie
+Rules (when sorted by lift): 
+1. Movies which have rule, duration time more than 120 min and the genre is drama, is more likely to be choosen by people about 2 times compared the other rules. However there are 377 movies and the probability is 10% in that rule. 
+
+2. Movies which have rule, duration time more than 120 min and the language is english, is more likely to be choosen by people about 1.8 times compared the other rules. However there are 454 movies and the probability is 12% in that rule. 
+
+
+
+### Successful Movie ###
+# investigate what makes a movie successful (profit > 2*budget)
+Below we would like to know which movies are successful, with the criteria when their profit is greater than their budget*2
+
+```{r, echo = FALSE, results='asis' }
+rules.success<-apriori(data=dt, parameter=list(supp=0.05,conf = 0.1), 
+                       appearance=list(default="lhs", rhs=c("success")), control=list(verbose=F)) 
+
+
+rules.success <- rules.success[is.redundant(rules.success)==FALSE]
+is.redundant(rules.success)
+
+inspect(rules.success)
+rules.success
+
+rules.success.bysupp<-sort(rules.success, by="support", decreasing=TRUE)
+inspect(rules.success.bysupp)
+
+```
+
+### Interpretation ###
+- There are 22 rules when movies are defined as successful movie
+Rules Rules (when sorted by support): :
+1. movies which have English subtitle are called successful movies. There are 519 movies with the probability around 15% in this database. However, this kind of movies have 1 times more likely to be choosen by people.  This rule will happen for sure about 16%.
+
+2. movies which come from USA are called as successful movie. There are 517 movies with the probability around 13% in this database. However this kind of movies have 1.1 times more likely to be choosen by people.  This rule will happen for sure about 17%.
+
+
+```{r, echo = FALSE, results='asis' }
+rules.success.byconf<-sort(rules.success, by="confidence", decreasing=TRUE)
+inspect(rules.success.byconf)
+```
+- There are 22 rules when movies are defined as successful movie
+Rules Rules (when sorted by confidence): :
+1. movies which have rules (English subtitle, Good Crtieria, Come from USA) are called successful movies. There are 248 movies with the probability around 29% in this database. However, this kind of movies have 1.8 times more likely to be choosen by people. This rule will happen for sure about 29%.
+
+2. movies which have rules such as Good movies and come from USA are called as successful movie. There are 249 movies with the probability around 13% in this database. However this kind of movies have 1.1 times more likely to be choosen by people. This rule will happen for sure about 27%.
+
+```{r, echo = FALSE, results='asis' }
+rules.success.bylift<-sort(rules.success, by="lift", decreasing=TRUE)
+inspect(rules.success.bylift)
+```
+
+- There are 22 rules when movies are defined as successful movie
+Rules Rules (when sorted by lift): :
+1. movies which have rules (English subtitle, Good Crtieria, Come from USA) are called successful movies. There are 248 movies with the probability around 29% in this database. However, this kind of movies have 1.8 times more likely to be choosen by people. This rule will happen for sure about 29%.
+
+2. movies which have rules such as Good movies and come from USA are called as successful movie. There are 249 movies with the probability around 13% in this database. However this kind of movies have 1.1 times more likely to be choosen by people. This rule will happen for sure about 29%.
+
+
+# USER-BASED MOVIE RECOMMENDER SYSTEM
+
+#write a function that returns movie title given movieId
+```{r, echo = FALSE, results='asis' }
+movie_titles <- read.csv2("movies.csv", sep=",")
+head(movie_titles)
+```
+
+```{r, echo = FALSE, results='asis' }
+usrRatings <- read.csv2("ratings.csv", sep=",")
+summary(usrRatings)
+
+# change the datatype to numbers
+usrRatings$rating <- as.numeric(usrRatings$rating)
+summary(usrRatings)
+head(usrRatings)
+```
+
+```{r, echo = FALSE, results='asis' }
+# save user review >= 4 as usrRecommend
+# select only 200 users to save memory
+usrRatings <- subset(usrRatings, usrRatings$userId<200)
+usrRecommend <- subset(usrRatings, usrRatings$rating>=4)
+head(usrRecommend)
+
+write.csv(usrRecommend, "usrRecommend.csv", row.names = FALSE)
+```
+
+```{r, echo = FALSE, results='asis' }
+# read user recommend file
+usrRecommends <- read.transactions("usrRecommend.csv", format="single", sep=",", cols = c(1,2), skip=1)
+inspect(usrRecommends)
+size(usrRecommends)
+```
+
+
+```{r, echo = FALSE, results='asis' }
+itemFrequency(usrRecommends)
+head(itemFrequency(usrRecommends, type="absolute"))
+itemFrequencyPlot(usrRecommends, type="absolute", topN = 20)
+```
+
+### Interpretation ###
+there are 69 users watched movie id = 1, there are 38 users watched movie id=10, there are 5 useres watched movie id = 101 and etc.
+
+```{r, echo = FALSE, results='asis' }
+# frequent items using eclat 
+# set rules for support = 0.2 and maxlen = 5 and confidence level at 0.9
+itemsets<-eclat(usrRecommends, parameter=list(supp=0.2, minlen=2, maxlen=5)) # basic 
+rules <- ruleInduction(itemsets, usrRecommends, confidence = 0.9)
+inspect(rules[1:20])
+```
+### Interpretation ###
+There are 57 rules about recommendation movies
+1. When User watched movie 5952 and 7153, they definitely also watched movie 4993 about 97% for sure. However there is 21% this kind of rule in this dataset.  Movie 5952 and 7153 then watched movie 4993 are 3 times more likely to be choosen by users.
+
+2. When User watched movie 4993 and 7153, they definitely also watched movie 5952 about 93% for sure. However there is 21% this kind of rule in this dataset.  Movie 4993 and 7153 then watched movie 5952 are 3 times more likely to be choosen by users.
+
+```{r, echo = FALSE, results='asis' }
+# apriori
+itemsets.ap<-apriori(usrRecommends, parameter=list(supp=0.2, conf=0.9)) 
+rules.by.conf<-sort(itemsets.ap, by="confidence", decreasing=TRUE) 
+inspect(rules.by.conf[1:20])
+rules.by.lift<-sort(itemsets.ap, by="lift", decreasing=TRUE) 
+inspect(rules.by.lift[1:20])
+rules.by.count<-sort(itemsets.ap, by="count", decreasing=TRUE) 
+inspect(rules.by.count[1:20])
+rules.by.supp<-sort(itemsets.ap, by="support", decreasing=TRUE) 
+inspect(rules.by.supp[1:20])
+```
+
+### Interpretation ###
+there are 57 rules for this apriori rules. However all of those rules above have the same interpretation but they will be sorted by difference parameters such as "confidence", "lift", "count", and "support".
+
+
+```{r, echo = FALSE, results='asis' }
+# function that extracts movie ids from rules
+extract_ids <- function(label){
+  matches <- regmatches(label, gregexpr("[[:digit:]]+", label))
+  m_id <- as.numeric(unlist(matches))
+  return (m_id)
+}
+
+
+labels(rules.by.conf[1:5])
+```
+
+### Interpretation ###
+From this, we would like to know the recommendation system by the movie id.
+1. When user will watch movies with id 318 and 608 they will recommend to watch movie with id 296
+2. When user will watch movies with id 1196 and 318 they will recommend to watch movie with id 260
+3. When user will watch movies with id 1196 and 593 they will recommend to watch movie with id 260
+
+
+```{r, echo = FALSE, results='asis' }
+# function that gets the movie title given ids
+get_title <- function(ids){
+  r <- list()
+  for (i in (1:length(ids))){
+    t <- movie_titles[movie_titles$movieId==ids[i],"title"]
+    r[i] <- as.character(t)
+  }
+  
+  return(r)
+}
+
+
+# functions that iterate through the rules and print out the corresponding title
+print_title <- function(rules){
+  result = list()
+  label <- labels(rules)
+  for (i in (1:length(label))){
+    ids <- extract_ids(label[i])
+    titles <- get_title(ids)
+    print("given that: ")
+    print(titles[1:length(titles)-1])
+    print("the following will be recommended: ")
+    print(titles[length(titles)])
+  }
+}
+```
+
+
+```{r, echo = FALSE, results='asis' }
+inspect(rules.by.supp[1:5])
+t <- print_title(rules.by.supp[1:5])
+```
+### Interpretation ###
+From this, we would like to know the recommendation system by the movie titles.
+1. When user will watch Star Wars: Episode V - The Empire Strikes Back (1980) they will recommend to watch Star Wars: Episode IV - A New Hope (1977)
+2. When user will watch Star Wars: Episode V - The Empire Strikes Back (1980) they will recommend to watch Star Wars: Episode VI - Return of the Jedi (1983)
+3. When user will watch Star Wars: Episode V - Star Wars: Episode IV - A New Hope (1977) they will recommend to watch Star Wars: Episode VI - Return of the Jedi (1983)
